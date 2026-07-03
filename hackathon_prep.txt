@@ -1,0 +1,23 @@
+Hackathon Prep Checklist & Ideas
+
+Date: Tomorrow
+
+1. Objectives
+- [ ] Define the problem statement
+- [ ] Brainstorm solutions
+- [ ] Select the best approach
+
+2. Tech Stack
+- Frontend: 
+- Backend: 
+- Database: 
+
+3. Timeline
+- Hour 1-2: Planning & Setup
+- Hour 3-12: Core Development
+- Hour 13-18: Refinement & UI
+- Hour 19-22: Testing & Bug Fixes
+- Hour 23-24: Presentation/Pitch Prep
+
+4. Ideas / Notes
+- 
