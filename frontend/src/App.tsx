@@ -8,24 +8,35 @@ import Profile from './pages/profile/Profile';
 import Attendance from './pages/attendance/Attendance';
 import TimeOff from './pages/timeoff/TimeOff';
 import NewTimeOff from './pages/timeoff/NewTimeOff';
+import Payroll from './pages/payroll/Payroll';
+import { AuthProvider } from './hooks/useAuth';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />} />
-        
-        <Route path="/" element={<Layout><Dashboard /></Layout>} />
-        <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
-        <Route path="/profile/:id" element={<Layout><Profile /></Layout>} />
-        <Route path="/attendance" element={<Layout><Attendance /></Layout>} />
-        <Route path="/timeoff" element={<Layout><TimeOff /></Layout>} />
-        <Route path="/timeoff/new" element={<Layout><NewTimeOff /></Layout>} />
-        
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/signup" element={<SignUp />} />
+          
+          {/* Default route redirects to dashboard as requested */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          
+          {/* Protected Routes */}
+          <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+          <Route path="/profile/:id" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
+          <Route path="/attendance" element={<ProtectedRoute><Layout><Attendance /></Layout></ProtectedRoute>} />
+          <Route path="/timeoff" element={<ProtectedRoute><Layout><TimeOff /></Layout></ProtectedRoute>} />
+          <Route path="/timeoff/new" element={<ProtectedRoute><Layout><NewTimeOff /></Layout></ProtectedRoute>} />
+          <Route path="/payroll" element={<ProtectedRoute><Layout><Payroll /></Layout></ProtectedRoute>} />
+          
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 
