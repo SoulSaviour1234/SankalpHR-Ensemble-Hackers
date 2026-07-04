@@ -161,11 +161,13 @@ const SignIn: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f0fbd4] to-[#f5f5f5] flex overflow-hidden">
       {/* Left side - Information/Branding (Consistent with SignUp) */}
-      <div className="hidden lg:flex lg:w-1/2 bg-white/40 p-12 flex-col justify-between relative overflow-hidden backdrop-blur-sm border-r border-white/50">
+      <div className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-between relative overflow-hidden border-r border-white/50">
+        {/* Background Image & Gradient Overlay for Left Side Only */}
+        <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: "url('/bg-corporate.png')" }} />
+        <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#f0fbd4]/80 to-[#f5f5f5]/90 backdrop-blur-[2px]" />
         <div className="relative z-10">
-          <Link to="/" className="flex items-center gap-2 mb-12">
-            <img src="/102.jpeg" alt="HRMS Logo" className="w-12 h-12 object-contain" />
-            <span className="text-2xl font-bold tracking-tight text-black">HRMS</span>
+          <Link to="/" className="flex items-center gap-2 mb-12 -ml-4">
+            <img src="/Horizontal_logo_lockup.png" alt="HRMS Logo Lockup" className="h-20 w-auto object-contain" />
           </Link>
 
           <div className="max-w-md space-y-8">
@@ -206,7 +208,7 @@ const SignIn: React.FC = () => {
       </div>
 
       {/* Right side - Content */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-12 bg-transparent relative">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-12 bg-transparent relative z-10">
         {renderForm()}
       </div>
     </div>

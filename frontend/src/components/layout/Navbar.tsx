@@ -11,7 +11,7 @@ const Navbar: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center justify-start">
             <Link to="/dashboard" className="flex ml-2 md:mr-24">
-              <span className="self-center text-xl font-semibold sm:text-2xl whitespace-nowrap text-blue-600">HRMS</span>
+              <img src="/Horizontal_logo_lockup.png" alt="HRMS Logo Lockup" className="h-12 w-auto object-contain" />
             </Link>
             <div className="hidden md:flex space-x-8 ml-10">
               <Link to="/dashboard" className="flex items-center text-gray-700 hover:text-blue-600 transition-colors">

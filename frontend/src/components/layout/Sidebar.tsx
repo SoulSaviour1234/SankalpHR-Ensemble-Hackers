@@ -37,13 +37,8 @@ const Sidebar: React.FC = () => {
 
   return (
     <aside className="w-64 bg-white border-r border-gray-100 flex flex-col h-screen sticky top-0">
-      <div className="p-6 flex items-center gap-2">
-        <div className="w-8 h-8 bg-black rounded-sm flex items-center justify-center">
-          <div className="w-4 h-4 border-2 border-white rotate-45 flex items-center justify-center">
-             <div className="w-1 h-1 bg-white rounded-full"></div>
-          </div>
-        </div>
-        <span className="text-xl font-bold tracking-tight">HRMS</span>
+      <div className="px-4 py-6 w-full flex items-center justify-center">
+        <img src="/Horizontal_logo_lockup.png" alt="HRMS Logo Lockup" className="w-full h-auto object-contain -ml-4 scale-110" />
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1">
