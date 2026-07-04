@@ -19,7 +19,6 @@ const Sidebar: React.FC = () => {
   const isAdmin = user?.role === 'admin';
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: Users, label: isAdmin ? 'Employees' : 'My Team', path: '/dashboard', adminOnly: true },
     { icon: Clock, label: 'Attendance', path: '/attendance' },
     { icon: Calendar, label: 'Time Off', path: '/timeoff' },

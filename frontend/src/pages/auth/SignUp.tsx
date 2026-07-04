@@ -125,9 +125,9 @@ const SignUp: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-white flex overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[#f0fbd4] to-[#f5f5f5] flex overflow-hidden">
       {/* Left side - Information/Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#F8FAFC] p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-white/40 p-12 flex-col justify-between relative overflow-hidden backdrop-blur-sm border-r border-white/50">
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-12">
             <img src="/102.jpeg" alt="HRMS Logo" className="w-12 h-12 object-contain" />
@@ -172,7 +172,7 @@ const SignUp: React.FC = () => {
       </div>
 
       {/* Right side - Registration Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-12 bg-white">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-12 bg-transparent">
         {renderForm()}
       </div>
     </div>

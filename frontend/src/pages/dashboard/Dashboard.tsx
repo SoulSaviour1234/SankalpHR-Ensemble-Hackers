@@ -27,7 +27,7 @@ const Dashboard: React.FC = () => {
   if (!user) return null;
 
   return (
-    <div className="space-y-8 -m-6 p-6 min-h-[calc(100vh-4rem)] bg-gradient-to-br from-hrms-bg via-white to-hrms-blue/10">
+    <div className="space-y-8 -m-6 p-6 min-h-[calc(100vh-4rem)]">
       {user.role === 'employee' ? <EmployeeDashboard /> : <AdminDashboard />}
     </div>
   );
