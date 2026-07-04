@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Plus, 
@@ -10,28 +10,61 @@ import {
   MoreVertical,
   Search,
   ChevronRight,
-  MessageSquare
+  MessageSquare,
+  FileDown
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
+import { api, TimeOffRequest, TimeOffAllocation } from '../../utils/api';
 
 const TimeOff: React.FC = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  
-  const [requests, setRequests] = useState([
-    { id: '1', name: 'John Doe', type: 'Paid Time Off', start: 'July 15, 2026', end: 'July 17, 2026', days: 3, status: 'approved', remarks: 'Annual family trip', comment: 'Enjoy your holidays!' },
-    { id: '2', name: 'Jane Smith', type: 'Sick Leave', start: 'July 20, 2026', end: 'July 21, 2026', days: 2, status: 'pending', remarks: 'Severe fever and cough', comment: '' },
-    { id: '3', name: 'Mike Ross', type: 'Unpaid Leave', start: 'July 25, 2026', end: 'July 25, 2026', days: 1, status: 'rejected', remarks: 'Personal errand', comment: 'Resource crunch during this period.' },
-  ]);
+  const [requests, setRequests] = useState<TimeOffRequest[]>([]);
+  const [allocations, setAllocations] = useState<TimeOffAllocation[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const allocations = [
-    { type: 'Paid Time Off', available: 24, total: 30, color: 'bg-hrms-blue text-blue-600 border-blue-100' },
-    { type: 'Sick Time Off', available: 7, total: 10, color: 'bg-hrms-green text-green-600 border-green-100' },
-  ];
+  const loadData = async () => {
+    try {
+      const reqData = await api.timeOff.requests();
+      setRequests(reqData);
 
-  const handleAction = (id: string, newStatus: 'approved' | 'rejected') => {
-    setRequests(requests.map(req => req.id === id ? { ...req, status: newStatus } : req));
+      const allocData = await api.timeOff.allocations(isAdmin ? undefined : user?.id);
+      setAllocations(allocData);
+    } catch (e) {
+      console.error('Failed to load time-off data:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [user]);
+
+  const handleAction = async (id: string, newStatus: 'approved' | 'rejected') => {
+    try {
+      await api.timeOff.updateStatus(id, newStatus);
+      loadData();
+    } catch (e: any) {
+      alert(e.message || 'Failed to update request status.');
+    }
+  };
+
+  const filteredRequests = requests.filter(req => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesName = req.employee?.name.toLowerCase().includes(searchLower) || false;
+    const matchesType = req.type.toLowerCase().includes(searchLower);
+    return matchesName || matchesType;
+  });
+
+  const getAllocationColor = (type: string) => {
+    switch (type) {
+      case 'paid':
+        return 'bg-hrms-blue text-blue-600 border-blue-100';
+      case 'sick':
+        return 'bg-hrms-green text-green-600 border-green-100';
+      default:
+        return 'bg-slate-200 text-slate-600 border-slate-300';
+    }
   };
 
   return (
@@ -59,16 +92,16 @@ const TimeOff: React.FC = () => {
 
       {/* Allocation Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {allocations.map((alloc, i) => (
-          <div key={i} className={cn("p-8 rounded-[2.5rem] border shadow-sm relative overflow-hidden group", alloc.color)}>
+        {allocations.map((alloc) => (
+          <div key={alloc.id} className={cn("p-8 rounded-[2.5rem] border shadow-sm relative overflow-hidden group", getAllocationColor(alloc.type))}>
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">{alloc.type}</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">{alloc.type} Time Off</span>
                 <Calendar className="w-4 h-4 opacity-40" />
               </div>
               <div className="flex items-baseline gap-2">
-                <h3 className="text-4xl font-bold">{alloc.available}</h3>
-                <span className="text-sm font-bold opacity-60">/ {alloc.total} Days</span>
+                <h3 className="text-4xl font-bold">{alloc.remainingDays}</h3>
+                <span className="text-sm font-bold opacity-60">/ {alloc.totalDays} Days</span>
               </div>
               <p className="text-xs font-medium mt-1 opacity-70">Available for this year</p>
             </div>
@@ -83,7 +116,7 @@ const TimeOff: React.FC = () => {
               <span className="text-xs font-bold uppercase tracking-widest">Policy Note</span>
            </div>
            <p className="text-sm text-slate-500 leading-relaxed font-medium">
-             Medical certificates are mandatory for sick leave requests exceeding 2 days.
+             Medical certificates are mandatory for sick leave requests.
            </p>
         </div>
       </div>
@@ -99,6 +132,8 @@ const TimeOff: React.FC = () => {
             <input 
               type="text" 
               placeholder="Filter requests..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2 bg-slate-50 border border-transparent rounded-xl text-xs w-48 focus:bg-white focus:border-gray-100 transition-all outline-none"
             />
           </div>
@@ -116,40 +151,45 @@ const TimeOff: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {requests.map((req) => (
+              {filteredRequests.map((req) => (
                 <tr key={req.id} className="hover:bg-slate-50/30 transition-colors group">
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "w-8 h-8 rounded-lg flex items-center justify-center",
-                        req.type.includes('Sick') ? "bg-red-50 text-red-500" : "bg-blue-50 text-blue-500"
+                        req.type === 'sick' ? "bg-red-50 text-red-500" : "bg-blue-50 text-blue-500"
                       )}>
                         <Clock className="w-4 h-4" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-slate-900">{req.type}</p>
-                          {req.remarks && (
-                            <div className="group/note relative">
-                              <MessageSquare className="w-3 h-3 text-slate-300 cursor-help" />
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg opacity-0 group-hover/note:opacity-100 transition-opacity pointer-events-none z-50">
-                                {req.remarks}
-                              </div>
-                            </div>
+                          <p className="text-sm font-bold text-slate-900 uppercase text-xs">{req.type} Leave</p>
+                          {req.attachmentUrl && (
+                            <a 
+                              href={`http://localhost:5000${req.attachmentUrl}`} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-black transition-colors"
+                              title="Download Attachment"
+                            >
+                              <FileDown className="w-3 h-3" />
+                            </a>
                           )}
                         </div>
-                        {isAdmin && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{req.name}</p>}
+                        {isAdmin && req.employee && (
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{req.employee.name}</p>
+                        )}
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
-                      <span>{req.start}</span>
+                      <span>{new Date(req.startDate).toLocaleDateString()}</span>
                       <ChevronRight className="w-3 h-3 text-slate-300" />
-                      <span>{req.end}</span>
+                      <span>{new Date(req.endDate).toLocaleDateString()}</span>
                     </div>
                   </td>
-                  <td className="px-8 py-5 text-sm font-bold text-slate-900">{req.days}</td>
+                  <td className="px-8 py-5 text-sm font-bold text-slate-900">{req.allocationDays}</td>
                   <td className="px-8 py-5">
                     <div className="flex flex-col gap-1">
                       <span className={cn(
@@ -161,9 +201,6 @@ const TimeOff: React.FC = () => {
                          req.status === 'pending' ? <AlertCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                         {req.status}
                       </span>
-                      {req.comment && (
-                        <p className="text-[9px] text-slate-400 font-medium italic">"{req.comment}"</p>
-                      )}
                     </div>
                   </td>
                   <td className="px-8 py-5 text-right">
@@ -190,6 +227,11 @@ const TimeOff: React.FC = () => {
                   </td>
                 </tr>
               ))}
+              {filteredRequests.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-8 py-8 text-center text-slate-400 font-medium">No requests found.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -16,22 +16,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
+import { api, Employee } from '../../utils/api';
 
-interface Employee {
-  id: string;
-  name: string;
-  role: string;
-  department: string;
-  status: 'present' | 'absent' | 'on-leave';
-  avatar: string;
-}
-
-const mockEmployees: Employee[] = [
-  { id: '1', name: 'John Doe', role: 'Senior Developer', department: 'Engineering', status: 'present', avatar: 'https://i.pravatar.cc/150?u=1' },
-  { id: '2', name: 'Jane Smith', role: 'Product Manager', department: 'Product', status: 'on-leave', avatar: 'https://i.pravatar.cc/150?u=2' },
-  { id: '3', name: 'Mike Ross', role: 'UI Designer', department: 'Design', status: 'absent', avatar: 'https://i.pravatar.cc/150?u=3' },
-  { id: '4', name: 'Rachel Zane', role: 'HR Specialist', department: 'HR', status: 'present', avatar: 'https://i.pravatar.cc/150?u=4' },
-];
+const mockEmployees: Employee[] = [];
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -152,21 +139,30 @@ const EmployeeDashboard = () => {
 
 const AdminDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  React.useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const data = await api.employees.list(searchTerm);
+        setEmployees(data);
+      } catch (err) {
+        console.error('Failed to fetch employees:', err);
+      }
+    };
+    fetchEmployees();
+  }, [searchTerm]);
+
   const stats = [
-    { label: 'Total Employees', value: '450', icon: Users, color: 'bg-hrms-blue text-blue-600' },
-    { label: 'Present Today', value: '412', icon: CheckCircle2, color: 'bg-hrms-green text-green-600' },
-    { label: 'On Leave', value: '23', icon: Plane, color: 'bg-hrms-orange text-orange-600' },
-    { label: 'Pending Approvals', value: '12', icon: AlertCircle, color: 'bg-hrms-purple text-purple-600' },
+    { label: 'Total Employees', value: employees.length.toString(), icon: Users, color: 'bg-hrms-blue text-blue-600' },
+    { label: 'Present Today', value: employees.filter(e => e.status === 'present').length.toString(), icon: CheckCircle2, color: 'bg-hrms-green text-green-600' },
+    { label: 'On Leave', value: employees.filter(e => e.status === 'leave').length.toString(), icon: Plane, color: 'bg-hrms-orange text-orange-600' },
+    { label: 'Absent', value: employees.filter(e => e.status === 'absent').length.toString(), icon: AlertCircle, color: 'bg-hrms-purple text-purple-600' },
   ];
 
-  const filteredEmployees = mockEmployees.filter(emp => 
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.department.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -237,7 +233,7 @@ const EmployeeCard = ({ employee, onClick }: { employee: Employee; onClick: () =
 
       <div className="flex flex-col items-center text-center">
         <div className="w-20 h-20 rounded-2xl bg-gray-50 mb-4 overflow-hidden border-2 border-transparent group-hover:border-hrms-lime transition-all group-hover:scale-105 shadow-inner">
-          <img src={employee.avatar} alt={employee.name} className="w-full h-full object-cover" />
+          <img src={employee.profilePictureUrl ? `http://localhost:5000${employee.profilePictureUrl}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name)}`} alt={employee.name} className="w-full h-full object-cover" />
         </div>
         
         <h3 className="font-bold text-slate-900 group-hover:text-black transition-colors">{employee.name}</h3>
@@ -245,7 +241,7 @@ const EmployeeCard = ({ employee, onClick }: { employee: Employee; onClick: () =
         
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           <span className="px-3 py-1 bg-slate-50 text-slate-500 text-[10px] font-bold rounded-lg uppercase tracking-tight">
-            {employee.department}
+            {employee.department || 'N/A'}
           </span>
         </div>
       </div>
@@ -257,7 +253,7 @@ const StatusIndicator = ({ status }: { status: Employee['status'] }) => {
   switch (status) {
     case 'present':
       return <div className="w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm ring-4 ring-green-50" title="Present" />;
-    case 'on-leave':
+    case 'leave':
       return <div className="bg-blue-50 p-1.5 rounded-full ring-4 ring-blue-50" title="On Leave"><Plane className="w-3 h-3 text-blue-500" /></div>;
     case 'absent':
       return <div className="w-3 h-3 rounded-full bg-yellow-400 border-2 border-white shadow-sm ring-4 ring-yellow-50" title="Absent" />;

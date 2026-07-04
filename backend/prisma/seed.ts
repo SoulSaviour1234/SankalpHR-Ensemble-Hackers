@@ -25,8 +25,12 @@ async function main() {
   });
   console.log(`Created company: ${company.name}`);
 
+  // Read admin credentials from .env
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@company.com';
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'AdminPass123';
+
   // Hash passwords
-  const adminPasswordHash = await bcrypt.hash('AdminPass123', 10);
+  const adminPasswordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
   const employeePasswordHash = await bcrypt.hash('EmployeePass123', 10);
 
   // 2. Create Admin Employee
@@ -36,7 +40,7 @@ async function main() {
       companyId: company.id,
       loginId: adminLoginId,
       name: 'HR Admin',
-      email: 'admin@company.com',
+      email: ADMIN_EMAIL,
       personalEmail: 'admin.personal@gmail.com',
       mobile: '+919999999999',
       passwordHash: adminPasswordHash,

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Environment Variables & Secrets (CRITICAL)
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+*.env
+*.env.*
+!*.env.example
+
+# Production Build
+dist/
+*.tsbuildinfo
+
+# SQLite Database (Keep dev.db tracked, ignore locks and journals)
+prisma/*.db-journal
+prisma/*.sqlite-journal
+prisma/*.tmp
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

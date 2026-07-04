@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, CheckCircle2, ChevronRight, AlertCircle, ShieldCheck, Briefcase } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
+import { api, setAuthToken, clearAuthSession } from '../../utils/api';
 
 const SignIn: React.FC = () => {
   const [view, setView] = useState<'admin' | 'employee'>('admin');
@@ -16,35 +17,25 @@ const SignIn: React.FC = () => {
 
   const from = location.state?.from?.pathname || '/dashboard';
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Mock validation
-    if (view === 'admin') {
-      if (email === 'admin@company.com' && password === 'password') {
-        login({
-          id: 'admin-1',
-          name: 'System Admin',
-          email: 'admin@company.com',
-          role: 'admin'
-        });
-        navigate(from, { replace: true });
-      } else {
-        setError('Invalid admin credentials. Please try again.');
-      }
-    } else {
-      if (email === 'emp001' && password === 'password') {
-        login({
-          id: 'emp-1',
-          name: 'Jane Doe',
-          email: 'jane@company.com',
-          role: 'employee'
-        });
-        navigate(from, { replace: true });
-      } else {
-        setError('Invalid employee ID or password. Please try again.');
-      }
+    try {
+      const res = await api.auth.signin({
+        loginIdOrEmail: email,
+        password: password
+      });
+      setAuthToken(res.token);
+      login({
+        id: res.user.id,
+        name: res.user.name,
+        email: res.user.email,
+        role: res.user.role
+      });
+      navigate(from, { replace: true });
+    } catch (err: any) {
+      setError(err.message || 'Invalid credentials. Please try again.');
     }
   };
 

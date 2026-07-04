@@ -9,12 +9,12 @@ This is the Express + Prisma + SQLite backend server for the Human Resource Mana
    pnpm install
    ```
 
-2. **Database Setup**:
-   Prisma handles the SQLite database. Set up migrations and seed sample data:
+2. **Database Setup (Optional / Reset)**:
+   The SQLite database (`dev.db`) is already checked into the repository with pre-seeded data, so **you can skip this step**! If you ever want to reset or re-seed the database:
    ```bash
    pnpm db:setup
    ```
-   *This command runs migrations to create tables in `dev.db` and runs `prisma/seed.ts` to insert company, employee, salary, attendance, and time-off data.*
+   *This command runs migrations to create/reset tables in `dev.db` and runs `prisma/seed.ts` to insert default data.*
 
 3. **Run Server in Development Mode**:
    ```bash
@@ -35,13 +35,13 @@ This is the Express + Prisma + SQLite backend server for the Human Resource Mana
 You can test the system using these pre-seeded accounts:
 
 ### 1. Admin/HR Account
-- **Login ID**: `OIHRAD20260001`
-- **Password**: `AdminPass123`
+- **Email/Login ID**: `admin@company.com` (Reads from `ADMIN_EMAIL` in `.env`)
+- **Password**: `AdminPass123` (Reads from `ADMIN_PASSWORD` in `.env`)
 - **Role**: `admin`
 - **Company**: Odoo India
 
 ### 2. Employee Account (John Doe - worked salary example in §4.4)
-- **Login ID**: `OIJODO20220001`
+- **Login ID**: `OIJODO20220001` (or `john.doe@company.com`)
 - **Password**: `EmployeePass123`
 - **Role**: `employee`
 - **Wage**: ₹50,000 / month
@@ -55,7 +55,7 @@ You can test the system using these pre-seeded accounts:
 - **Allocations**: 24 Days Paid Leave, 7 Days Sick Leave
 
 ### 3. Employee Account (Jane Smith)
-- **Login ID**: `OIJASM20230001`
+- **Login ID**: `OIJASM20230001` (or `jane.smith@company.com`)
 - **Password**: `EmployeePass123`
 - **Role**: `employee`
 - **Wage**: ₹80,000 / month
@@ -70,17 +70,15 @@ Private endpoints require the `Authorization` header with a bearer token:
 
 ### 1. Authentication (`/api/auth`)
 
-#### Sign Up (Company Admin)
+#### Sign Up (Employee)
 - **Endpoint**: `POST /auth/signup`
-- **Headers**: `Content-Type: multipart/form-data`
-- **Fields**:
-  - `companyName` (text)
+- **Headers**: `Content-Type: application/json` or `multipart/form-data`
+- **Body / Fields**:
   - `name` (text)
   - `email` (text)
-  - `phone` (text, optional)
   - `password` (text)
-  - `logo` (file upload, optional)
-- **Response**: Creates company and generates login ID + token.
+- **Response**: Registers employee under default company, returns token + login credentials.
+- **Security constraint**: Portal Admin accounts cannot be created via the UI/API. They are provisioned dynamically from backend environment values (`ADMIN_EMAIL`/`ADMIN_PASSWORD`) on startup.
 
 #### Sign In
 - **Endpoint**: `POST /auth/signin`

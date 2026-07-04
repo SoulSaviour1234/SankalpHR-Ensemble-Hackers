@@ -164,6 +164,23 @@ export const getEmployees = async (req: AuthenticatedRequest, res: Response) => 
 
     const { search } = req.query;
 
+    const selectFields: any = {
+      id: true,
+      loginId: true,
+      name: true,
+      email: true,
+      mobile: true,
+      role: true,
+      jobPosition: true,
+      department: true,
+      location: true,
+      profilePictureUrl: true,
+    };
+
+    if (req.user?.role === 'admin') {
+      selectFields.salaryInfo = true;
+    }
+
     const employees = await prisma.employee.findMany({
       where: {
         companyId,
@@ -179,18 +196,7 @@ export const getEmployees = async (req: AuthenticatedRequest, res: Response) => 
             }
           : {}),
       },
-      select: {
-        id: true,
-        loginId: true,
-        name: true,
-        email: true,
-        mobile: true,
-        role: true,
-        jobPosition: true,
-        department: true,
-        location: true,
-        profilePictureUrl: true,
-      },
+      select: selectFields,
     });
 
     // Calculate current day status indicator for each employee:

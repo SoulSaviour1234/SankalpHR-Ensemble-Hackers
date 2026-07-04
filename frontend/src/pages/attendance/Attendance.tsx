@@ -9,19 +9,71 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
+import { api, Attendance as AttendanceType } from '../../utils/api';
 
 const Attendance: React.FC = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [logs, setLogs] = useState<AttendanceType[]>([]);
+  const [summary, setSummary] = useState({ presentCount: 0, leavesCount: 0, totalWorkingDays: 0 });
+  const [adminLogs, setAdminLogs] = useState<AttendanceType[]>([]);
+  
+  const loadData = async () => {
+    try {
+      if (isAdmin) {
+        const res = await api.attendance.allLogs();
+        setAdminLogs(res.logs);
+      } else {
+        const res = await api.attendance.myLogs();
+        setLogs(res.logs);
+        setSummary(res.summary);
+        
+        // Determine if currently checked in (has checkIn but no checkOut for today)
+        const today = new Date().toISOString().split('T')[0];
+        const todayLog = res.logs.find(l => l.date.startsWith(today));
+        if (todayLog && todayLog.checkIn && !todayLog.checkOut) {
+          setIsCheckedIn(true);
+        } else {
+          setIsCheckedIn(false);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  React.useEffect(() => {
+    loadData();
+  }, [isAdmin]);
+
+  const handleCheckIn = async () => {
+    try {
+      await api.attendance.checkIn();
+      loadData();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
+  const handleCheckOut = async () => {
+    try {
+      await api.attendance.checkOut();
+      loadData();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
   
   const stats = [
-    { label: 'Present Days', value: '18', icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
-    { label: 'Leaves Taken', value: '2', icon: CalendarIcon, color: 'text-blue-600 bg-blue-50' },
-    { label: 'Working Days', value: '22', icon: Clock3, color: 'text-slate-600 bg-slate-50' },
+    { label: 'Present Days', value: summary.presentCount.toString(), icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
+    { label: 'Leaves Taken', value: summary.leavesCount.toString(), icon: CalendarIcon, color: 'text-blue-600 bg-blue-50' },
+    { label: 'Working Days', value: summary.totalWorkingDays.toString(), icon: Clock3, color: 'text-slate-600 bg-slate-50' },
   ];
 
-  // Mock Calendar Data
+  const displayLogs = isAdmin ? adminLogs : logs;
+
+  // Mock Calendar Data for visual purely
   const daysInMonth = Array.from({ length: 31 }, (_, i) => ({
     day: i + 1,
     status: Math.random() > 0.8 ? 'absent' : (Math.random() > 0.1 ? 'present' : 'leave')
@@ -50,14 +102,14 @@ const Attendance: React.FC = () => {
               <div className="flex gap-2">
                 {!isCheckedIn ? (
                   <button 
-                    onClick={() => setIsCheckedIn(true)}
+                    onClick={handleCheckIn}
                     className="px-6 py-2 bg-hrms-lime text-slate-900 rounded-xl text-xs font-bold shadow-sm hover:opacity-90 transition-all active:scale-95"
                   >
                     CHECK IN
                   </button>
                 ) : (
                   <button 
-                    onClick={() => setIsCheckedIn(false)}
+                    onClick={handleCheckOut}
                     className="px-6 py-2 bg-white border border-gray-100 text-slate-900 rounded-xl text-xs font-bold shadow-sm hover:bg-gray-50 transition-all active:scale-95"
                   >
                     CHECK OUT
@@ -164,35 +216,44 @@ const Attendance: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <tr key={i} className="hover:bg-slate-50/30 transition-colors group">
+                {displayLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-50/30 transition-colors group">
                     <td className="px-8 py-5">
-                      {isAdmin ? (
+                      {isAdmin && log.employee ? (
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-slate-100 overflow-hidden shadow-inner">
-                             <img src={`https://i.pravatar.cc/150?u=${i}`} alt="User" />
+                             <img src={log.employee.profilePictureUrl ? `http://localhost:5000${log.employee.profilePictureUrl}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(log.employee.name)}`} alt="User" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-slate-900">Employee {i}</p>
-                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">July 04, 2026</p>
+                            <p className="text-sm font-bold text-slate-900">{log.employee.name}</p>
+                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">{new Date(log.date).toLocaleDateString()}</p>
                           </div>
                         </div>
                       ) : (
-                        <span className="text-sm font-bold text-slate-700">July {i < 10 ? `0${i}` : i}, 2026</span>
+                        <span className="text-sm font-bold text-slate-700">{new Date(log.date).toLocaleDateString()}</span>
                       )}
                     </td>
-                    <td className="px-8 py-5 text-sm font-medium text-slate-600">09:0{i} AM</td>
-                    <td className="px-8 py-5 text-sm font-medium text-slate-600">06:00 PM</td>
+                    <td className="px-8 py-5 text-sm font-medium text-slate-600">
+                      {log.checkIn ? new Date(log.checkIn).toLocaleTimeString() : '-'}
+                    </td>
+                    <td className="px-8 py-5 text-sm font-medium text-slate-600">
+                      {log.checkOut ? new Date(log.checkOut).toLocaleTimeString() : '-'}
+                    </td>
                     <td className="px-8 py-5">
                       <span className={cn(
                         "px-3 py-1 text-[10px] font-bold rounded-lg uppercase",
-                        i % 3 === 0 ? "bg-red-50 text-red-600" : (i % 4 === 0 ? "bg-blue-50 text-blue-600" : "bg-green-50 text-green-600")
+                        log.status === 'absent' ? "bg-red-50 text-red-600" : (log.status === 'leave' ? "bg-blue-50 text-blue-600" : "bg-green-50 text-green-600")
                       )}>
-                        {i % 3 === 0 ? 'Absent' : (i % 4 === 0 ? 'Leave' : 'Present')}
+                        {log.status}
                       </span>
                     </td>
                   </tr>
                 ))}
+                {displayLogs.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-8 py-8 text-center text-slate-400 font-medium">No records found.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

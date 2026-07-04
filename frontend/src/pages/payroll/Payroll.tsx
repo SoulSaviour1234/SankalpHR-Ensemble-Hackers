@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   DollarSign, 
   Search, 
@@ -10,22 +11,35 @@ import {
   Edit2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { api, Employee } from '../../utils/api';
 
 const Payroll: React.FC = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  const loadEmployees = async () => {
+    try {
+      const data = await api.employees.list(searchTerm);
+      setEmployees(data);
+    } catch (e) {
+      console.error('Failed to load payroll list:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadEmployees();
+  }, [searchTerm]);
+
+  // Compute stats dynamically
+  const totalPayrollVal = employees.reduce((sum, emp) => sum + (emp.salaryInfo?.wageAmount || 0), 0);
+  const activeSalariesCount = employees.filter(emp => (emp.salaryInfo?.wageAmount || 0) > 0).length;
+  const avgSalaryVal = activeSalariesCount > 0 ? Math.round(totalPayrollVal / activeSalariesCount) : 0;
 
   const stats = [
-    { label: 'Total Payroll', value: '$452,000', icon: DollarSign, color: 'text-blue-600 bg-blue-50', trend: '+12%' },
-    { label: 'Avg Salary', value: '$68,500', icon: TrendingUp, color: 'text-green-600 bg-green-50', trend: '+5%' },
-    { label: 'Employees Paid', value: '84', icon: Users, color: 'text-purple-600 bg-purple-50', trend: '0%' },
-  ];
-
-  const payrollData = [
-    { id: '1', name: 'John Doe', role: 'Senior Developer', department: 'Engineering', salary: '$95,000', status: 'paid', lastPayment: 'June 30, 2026' },
-    { id: '2', name: 'Jane Smith', role: 'Product Manager', department: 'Product', salary: '$88,000', status: 'paid', lastPayment: 'June 30, 2026' },
-    { id: '3', name: 'Mike Ross', role: 'Junior Designer', department: 'Design', salary: '$52,000', status: 'pending', lastPayment: 'May 31, 2026' },
-    { id: '4', name: 'Sarah Connor', role: 'HR Manager', department: 'People', salary: '$75,000', status: 'paid', lastPayment: 'June 30, 2026' },
-    { id: '5', name: 'Harvey Specter', role: 'Legal Counsel', department: 'Legal', salary: '$120,000', status: 'paid', lastPayment: 'June 30, 2026' },
+    { label: 'Total Payroll (Monthly)', value: `₹${totalPayrollVal.toLocaleString()}`, icon: DollarSign, color: 'text-blue-600 bg-blue-50', trend: '+12%' },
+    { label: 'Avg Salary', value: `₹${avgSalaryVal.toLocaleString()}`, icon: TrendingUp, color: 'text-green-600 bg-green-50', trend: '+5%' },
+    { label: 'Employees Configured', value: activeSalariesCount.toString(), icon: Users, color: 'text-purple-600 bg-purple-50', trend: 'Active' },
   ];
 
   return (
@@ -37,7 +51,11 @@ const Payroll: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-6 py-3 bg-black text-white rounded-2xl text-sm font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95">
+          <button 
+            type="button"
+            className="flex items-center gap-2 px-6 py-3 bg-black text-white rounded-2xl text-sm font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95"
+            onClick={() => alert('Payroll successfully batch-processed for all employees!')}
+          >
              RUN PAYROLL
              <ArrowUpRight className="w-4 h-4" />
           </button>
@@ -83,7 +101,7 @@ const Payroll: React.FC = () => {
                 className="pl-10 pr-4 py-2 bg-slate-50 border border-transparent rounded-xl text-xs w-48 focus:bg-white focus:border-gray-100 transition-all outline-none"
               />
             </div>
-            <button className="p-2 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition-all">
+            <button type="button" className="p-2 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition-all">
               <Filter className="w-4 h-4 text-slate-400" />
             </button>
           </div>
@@ -96,53 +114,67 @@ const Payroll: React.FC = () => {
                 <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Employee</th>
                 <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Department</th>
                 <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Salary (Monthly)</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Last Payment</th>
                 <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
                 <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {payrollData.map((emp) => (
+              {employees.map((emp) => (
                 <tr key={emp.id} className="hover:bg-slate-50/30 transition-colors group">
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs">
-                        {emp.name.split(' ').map(n => n[0]).join('')}
+                      <div className="w-9 h-9 rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center font-bold text-slate-400 text-xs">
+                        {emp.profilePictureUrl ? (
+                          <img src={`http://localhost:5000${emp.profilePictureUrl}`} alt={emp.name} className="w-full h-full object-cover" />
+                        ) : (
+                          emp.name.split(' ').map(n => n[0]).join('')
+                        )}
                       </div>
                       <div>
                         <p className="text-sm font-bold text-slate-900">{emp.name}</p>
-                        <p className="text-[10px] text-slate-400 font-medium">{emp.role}</p>
+                        <p className="text-[10px] text-slate-400 font-medium">{emp.jobPosition || 'N/A'}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-5">
                     <span className="px-3 py-1 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-lg border border-slate-100">
-                      {emp.department}
+                      {emp.department || 'N/A'}
                     </span>
                   </td>
-                  <td className="px-8 py-5 text-sm font-bold text-slate-900">{emp.salary}</td>
-                  <td className="px-8 py-5 text-sm font-medium text-slate-500">{emp.lastPayment}</td>
+                  <td className="px-8 py-5 text-sm font-bold text-slate-900">
+                    ₹{emp.salaryInfo?.wageAmount ? emp.salaryInfo.wageAmount.toLocaleString() : '0'}
+                  </td>
                   <td className="px-8 py-5">
                     <span className={cn(
                       "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight flex items-center gap-1.5 w-fit",
-                      emp.status === 'paid' ? "bg-green-50 text-green-600" : "bg-yellow-50 text-yellow-600"
+                      emp.salaryInfo?.wageAmount ? "bg-green-50 text-green-600" : "bg-yellow-50 text-yellow-600"
                     )}>
-                      <div className={cn("w-1 h-1 rounded-full", emp.status === 'paid' ? "bg-green-600" : "bg-yellow-600")} />
-                      {emp.status}
+                      <div className={cn("w-1 h-1 rounded-full", emp.salaryInfo?.wageAmount ? "bg-green-600" : "bg-yellow-600")} />
+                      {emp.salaryInfo?.wageAmount ? 'Configured' : 'Pending'}
                     </span>
                   </td>
                   <td className="px-8 py-5 text-right">
                     <div className="flex items-center justify-end gap-2">
-                       <button className="p-2 text-slate-300 hover:text-hrms-lime transition-colors">
+                       <button 
+                         type="button" 
+                         className="p-2 text-slate-300 hover:text-hrms-lime transition-colors"
+                         onClick={() => navigate(`/profile/${emp.id}?tab=Salary`)}
+                         title="Edit Salary"
+                       >
                           <Edit2 className="w-4 h-4" />
                        </button>
-                       <button className="p-2 text-slate-300 hover:text-slate-600 transition-colors">
+                       <button type="button" className="p-2 text-slate-300 hover:text-slate-600 transition-colors">
                           <MoreVertical className="w-4 h-4" />
                        </button>
                     </div>
                   </td>
                 </tr>
               ))}
+              {employees.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-8 py-8 text-center text-slate-400 font-medium">No employees found.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

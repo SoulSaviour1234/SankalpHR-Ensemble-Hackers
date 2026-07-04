@@ -1,258 +1,97 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Building2, Mail, Phone, User, Eye, EyeOff, CheckCircle2, ChevronRight, Briefcase, ShieldCheck } from 'lucide-react';
+import { Mail, User, Eye, EyeOff, CheckCircle2, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
-
-type SignUpType = 'admin' | 'employee';
+import { api, setAuthToken } from '../../utils/api';
 
 const SignUp: React.FC = () => {
-  const [signUpType, setSignUpType] = useState<SignUpType>('admin');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleAdminSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock signup
-    login({
-      id: 'admin-1',
-      name: 'New Admin',
-      email: 'admin@company.com',
-      role: 'admin'
-    });
-    navigate('/dashboard');
+    setError('');
+
+    try {
+      const res = await api.auth.signupEmployee({ name, email, password });
+      setAuthToken(res.token);
+      login({
+        id: res.user.id,
+        name: res.user.name,
+        email: res.user.email,
+        role: res.user.role
+      });
+      navigate('/dashboard', { replace: true });
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+    }
   };
 
-  const handleEmployeeSignUp = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Mock activation/signup
-    login({
-      id: 'emp-1',
-      name: 'New Employee',
-      email: 'employee@company.com',
-      role: 'employee'
-    });
-    navigate('/dashboard');
-  };
-
-  const renderAdminForm = () => (
+  const renderForm = () => (
     <div className="max-w-md w-full animate-in fade-in slide-in-from-right-4 duration-500">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-slate-900 mb-2">Create Portal</h2>
-        <p className="text-slate-500">Enter organizational and admin details to begin.</p>
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">Create Account</h2>
+        <p className="text-slate-500">Join the organization portal to manage your HR profile.</p>
       </div>
 
-      {/* Role Switcher Tabs */}
-      <div className="flex bg-slate-100 p-1 rounded-2xl mb-8">
-        <button
-          onClick={() => setSignUpType('admin')}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all",
-            signUpType === 'admin' ? "bg-white text-black shadow-sm" : "text-slate-500 hover:text-slate-700"
-          )}
-        >
-          <ShieldCheck className={cn("w-4 h-4", signUpType === 'admin' ? "text-hrms-lime" : "text-slate-400")} />
-          ADMIN
-        </button>
-        <button
-          onClick={() => setSignUpType('employee')}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all",
-            signUpType === 'employee' ? "bg-white text-black shadow-sm" : "text-slate-500 hover:text-slate-700"
-          )}
-        >
-          <Briefcase className={cn("w-4 h-4", signUpType === 'employee' ? "text-hrms-blue" : "text-slate-400")} />
-          EMPLOYEE
-        </button>
-      </div>
-
-      <form className="space-y-5" onSubmit={handleAdminSignUp}>
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Company Name</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-black transition-colors">
-                  <Building2 className="h-5 w-5" />
-                </div>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ensemble Hackers Ltd."
-                  className="block w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-lime focus:border-transparent transition-all outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Full Name</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-black transition-colors">
-                  <User className="h-5 w-5" />
-                </div>
-                <input
-                  type="text"
-                  required
-                  placeholder="Admin Name"
-                  className="block w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-lime focus:border-transparent transition-all outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="col-span-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Work Email</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-black transition-colors">
-                  <Mail className="h-5 w-5" />
-                </div>
-                <input
-                  type="email"
-                  required
-                  placeholder="admin@company.com"
-                  className="block w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-lime focus:border-transparent transition-all outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="col-span-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Phone Number</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-black transition-colors">
-                  <Phone className="h-5 w-5" />
-                </div>
-                <input
-                  type="tel"
-                  required
-                  placeholder="+91 00000 00000"
-                  className="block w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-lime focus:border-transparent transition-all outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="col-span-1">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Password</label>
-              <div className="relative group">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  placeholder="••••••••"
-                  className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-lime focus:border-transparent transition-all outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-black"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="col-span-1">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Confirm</label>
-              <div className="relative group">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  required
-                  placeholder="••••••••"
-                  className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-lime focus:border-transparent transition-all outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-black"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-          </div>
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 animate-in fade-in slide-in-from-top-2 duration-300">
+          <p className="text-sm font-medium">{error}</p>
         </div>
+      )}
 
-        <button
-          type="submit"
-          className="w-full flex items-center justify-center gap-2 py-4 px-4 bg-black text-white rounded-2xl text-sm font-bold hover:bg-slate-800 transition-all active:scale-[0.98] shadow-xl shadow-slate-200"
-        >
-          CREATE PORTAL ACCOUNT
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </form>
-
-      <div className="mt-8 text-center">
-        <p className="text-sm text-slate-500 font-medium">
-          Already have an account?{' '}
-          <Link to="/signin" className="text-black font-bold hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </div>
-  );
-
-  const renderEmployeeForm = () => (
-    <div className="max-w-md w-full animate-in fade-in slide-in-from-right-4 duration-500">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-slate-900 mb-2">First Login?</h2>
-        <p className="text-slate-500">Enter your system-generated credentials to activate your account.</p>
-      </div>
-
-      {/* Role Switcher Tabs */}
-      <div className="flex bg-slate-100 p-1 rounded-2xl mb-8">
-        <button
-          onClick={() => setSignUpType('admin')}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all",
-            signUpType === 'admin' ? "bg-white text-black shadow-sm" : "text-slate-500 hover:text-slate-700"
-          )}
-        >
-          <ShieldCheck className={cn("w-4 h-4", signUpType === 'admin' ? "text-hrms-lime" : "text-slate-400")} />
-          ADMIN
-        </button>
-        <button
-          onClick={() => setSignUpType('employee')}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all",
-            signUpType === 'employee' ? "bg-white text-black shadow-sm" : "text-slate-500 hover:text-slate-700"
-          )}
-        >
-          <Briefcase className={cn("w-4 h-4", signUpType === 'employee' ? "text-hrms-blue" : "text-slate-400")} />
-          EMPLOYEE
-        </button>
-      </div>
-
-      <form className="space-y-6" onSubmit={handleEmployeeSignUp}>
+      <form className="space-y-5" onSubmit={handleSignUp}>
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">System Login ID</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Full Name</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-black transition-colors">
-                <ShieldCheck className="h-5 w-5" />
+                <User className="h-5 w-5" />
               </div>
               <input
                 type="text"
                 required
-                placeholder="Ex: ENJODO20240001"
-                className="block w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-blue/50 focus:border-transparent transition-all outline-none"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                className="block w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-lime focus:border-transparent transition-all outline-none"
               />
             </div>
-            <p className="mt-2 text-[10px] text-slate-400 italic">Check your welcome email from HR for your unique Login ID.</p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Temporary Password</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Work Email</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-black transition-colors">
                 <Mail className="h-5 w-5" />
               </div>
               <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="john.doe@company.com"
+                className="block w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-lime focus:border-transparent transition-all outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Password</label>
+            <div className="relative group">
+              <input
                 type={showPassword ? "text" : "password"}
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="block w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-blue/50 focus:border-transparent transition-all outline-none"
+                className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-lime focus:border-transparent transition-all outline-none"
               />
               <button
                 type="button"
@@ -267,9 +106,9 @@ const SignUp: React.FC = () => {
 
         <button
           type="submit"
-          className="w-full flex items-center justify-center gap-2 py-4 px-4 bg-hrms-blue text-white rounded-2xl text-sm font-bold hover:bg-blue-700 transition-all active:scale-[0.98] shadow-xl shadow-blue-100"
+          className="w-full flex items-center justify-center gap-2 py-4 px-4 bg-black text-white rounded-2xl text-sm font-bold hover:bg-slate-800 transition-all active:scale-[0.98] shadow-xl shadow-slate-200"
         >
-          ACTIVATE ACCOUNT
+          CREATE ACCOUNT
           <ChevronRight className="w-4 h-4" />
         </button>
       </form>
@@ -300,9 +139,7 @@ const SignUp: React.FC = () => {
               Transform your <span className="text-hrms-text-secondary">HR Workflow</span> with intelligence.
             </h1>
             <p className="text-lg text-slate-600">
-              {signUpType === 'employee' 
-                ? "Join your organization's digital workspace and manage your professional growth."
-                : "Set up your organization's portal in minutes and start managing your team more efficiently."}
+              Join your organization's digital workspace and manage your professional growth.
             </p>
             
             <div className="space-y-4 pt-4">
@@ -334,10 +171,9 @@ const SignUp: React.FC = () => {
         </div>
       </div>
 
-      {/* Right side - Registration Form / Selection */}
+      {/* Right side - Registration Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-12 bg-white">
-        {signUpType === 'admin' && renderAdminForm()}
-        {signUpType === 'employee' && renderEmployeeForm()}
+        {renderForm()}
       </div>
     </div>
   );

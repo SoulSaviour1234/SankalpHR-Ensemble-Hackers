@@ -162,11 +162,15 @@ export interface TimeOffAllocation {
 export const api = {
   // 1. Auth Endpoint Methods
   auth: {
-    signupAdmin: (formData: FormData) => {
-      // Expects multipart/form-data for logo upload
-      return request<{ message: string; loginId: string; token: string; user: any }>('/auth/signup', {
+    signupEmployee: (data: { name: string; email: string; password: string }) => {
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('email', data.email);
+      formData.append('password', data.password);
+      
+      return request<{ message: string; token: string; user: any }>('/auth/signup', {
         method: 'POST',
-        body: formData,
+        body: formData, // the backend uses upload.none() which parses multipart form data
       });
     },
     signin: (credentials: { loginIdOrEmail: string; password: string }) => {

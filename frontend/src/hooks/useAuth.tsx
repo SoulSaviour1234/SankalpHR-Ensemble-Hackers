@@ -18,13 +18,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>({
-    id: 'admin-1',
-    name: 'System Admin',
-    email: 'admin@company.com',
-    role: 'admin'
-  });
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   // Load user from localStorage on init
   useEffect(() => {

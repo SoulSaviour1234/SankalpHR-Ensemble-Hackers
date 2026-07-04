@@ -49,6 +49,8 @@ model Employee {
   certifications       String              @default("[]") // JSON stringified array of strings
   whatILoveAboutMyJob  String?
   interestsAndHobbies  String?
+  failedLoginAttempts  Int                 @default(0)
+  lockoutUntil         DateTime?
   salaryInfo           SalaryInfo?
   attendances          Attendance[]
   timeOffRequests      TimeOffRequest[]
