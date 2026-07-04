@@ -1,0 +1,105 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Company {
+  id        String     @id @default(uuid())
+  name      String
+  logoUrl   String?
+  employees Employee[]
+}
+
+model Employee {
+  id                   String              @id @default(uuid())
+  companyId            String
+  company              Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  loginId              String              @unique
+  name                 String
+  email                String              @unique
+  personalEmail        String?
+  mobile               String?
+  passwordHash         String
+  mustChangePassword   Boolean             @default(true)
+  role                 String              @default("employee") // 'admin' | 'employee'
+  jobPosition          String?
+  department           String?
+  manager              String?             // Name or ID of the manager
+  location             String?
+  dateOfJoining        DateTime?
+  dateOfBirth          DateTime?
+  nationality          String?
+  gender               String?
+  maritalStatus        String?
+  residingAddress      String?
+  bankName             String?
+  accountNumber        String?
+  ifscCode             String?
+  panNo                String?
+  uanNo                String?
+  empCode              String?
+  profilePictureUrl    String?
+  resumeUrl            String?
+  about                String?
+  skills               String              @default("[]") // JSON stringified array of strings
+  certifications       String              @default("[]") // JSON stringified array of strings
+  whatILoveAboutMyJob  String?
+  interestsAndHobbies  String?
+  salaryInfo           SalaryInfo?
+  attendances          Attendance[]
+  timeOffRequests      TimeOffRequest[]
+  timeOffAllocations  TimeOffAllocation[]
+}
+
+model SalaryInfo {
+  id                 String   @id @default(uuid())
+  employeeId         String   @unique
+  employee           Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  wageType           String   @default("fixed") // 'fixed'
+  wageAmount         Float
+  wagePeriod         String   @default("monthly") // 'monthly' | 'yearly'
+  workingDaysPerWeek Int      @default(5)
+  breakTime          Float    @default(1.0) // hours
+  components         String   @default("[]") // JSON stringified array of component objects
+  pfEmployeePercent  Float    @default(12.0)
+  pfEmployerPercent  Float    @default(12.0)
+  professionalTax    Float    @default(200.0)
+}
+
+model Attendance {
+  id         String    @id @default(uuid())
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date       DateTime  // Represents the date (year-month-day)
+  checkIn    DateTime?
+  checkOut   DateTime?
+  workHours  Float     @default(0.0)
+  extraHours Float     @default(0.0)
+  status     String    @default("absent") // 'present' | 'absent' | 'leave'
+}
+
+model TimeOffRequest {
+  id             String   @id @default(uuid())
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type           String   // 'paid' | 'sick' | 'unpaid'
+  startDate      DateTime
+  endDate        DateTime
+  allocationDays Float
+  attachmentUrl  String?
+  status         String   @default("pending") // 'pending' | 'approved' | 'rejected'
+}
+
+model TimeOffAllocation {
+  id            String   @id @default(uuid())
+  employeeId    String
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type          String   // 'paid' | 'sick' | 'unpaid'
+  totalDays     Float
+  usedDays      Float    @default(0.0)
+  remainingDays Float
+}
