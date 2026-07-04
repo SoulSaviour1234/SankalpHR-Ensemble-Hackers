@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
@@ -16,6 +16,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     // along to that page after they login, which is a nicer user experience
     // than dropping them off on the home page.
     return <Navigate to="/signin" state={{ from: location }} replace />;
+  }
+
+  if (user?.mustChangePassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />;
   }
 
   return <>{children}</>;

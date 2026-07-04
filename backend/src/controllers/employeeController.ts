@@ -181,7 +181,7 @@ export const getEmployees = async (req: AuthenticatedRequest, res: Response) => 
       selectFields.salaryInfo = true;
     }
 
-    const employees = await prisma.employee.findMany({
+    const employees = (await prisma.employee.findMany({
       where: {
         companyId,
         ...(search
@@ -197,7 +197,7 @@ export const getEmployees = async (req: AuthenticatedRequest, res: Response) => 
           : {}),
       },
       select: selectFields,
-    });
+    })) as any[];
 
     // Calculate current day status indicator for each employee:
     // Green (present) = checked in today (checkIn is present, checkOut is null, or present today)
@@ -227,8 +227,9 @@ export const getEmployees = async (req: AuthenticatedRequest, res: Response) => 
     });
 
     const employeesWithStatus = employees.map((emp) => {
-      const attendance = attendancesToday.find((att) => att.employeeId === emp.id);
-      const leave = activeLeavesToday.find((l) => l.employeeId === emp.id);
+      const empId = emp.id as string;
+      const attendance = attendancesToday.find((att) => att.employeeId === empId);
+      const leave = activeLeavesToday.find((l) => l.employeeId === empId);
 
       let status = 'absent'; // Default yellow
       if (leave) {
@@ -449,6 +450,10 @@ export const uploadAttachment = async (req: AuthenticatedRequest, res: Response)
 
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded.' });
+    }
+
+    if (fileType === 'resume' && req.user?.id !== id) {
+      return res.status(403).json({ error: 'Permission denied. Only the employee can upload or update their own resume.' });
     }
 
     const employee = await prisma.employee.findUnique({

@@ -85,6 +85,7 @@ export const signUpEmployee = async (req: AuthenticatedRequest, res: Response) =
         role: employee.role,
         companyId: employee.companyId,
         mustChangePassword: employee.mustChangePassword,
+        profilePictureUrl: employee.profilePictureUrl,
       },
     });
   } catch (error: any) {
@@ -184,6 +185,7 @@ export const signIn = async (req: AuthenticatedRequest, res: Response) => {
         role: employee.role,
         companyId: employee.companyId,
         mustChangePassword: employee.mustChangePassword,
+        profilePictureUrl: employee.profilePictureUrl,
         company: {
           id: employee.company.id,
           name: employee.company.name,

@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, CheckCircle2, ChevronRight, AlertCircle, ShieldCheck, Briefcase } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
-import { api, setAuthToken, clearAuthSession } from '../../utils/api';
+import { api, setAuthToken } from '../../utils/api';
 
 const SignIn: React.FC = () => {
   const [view, setView] = useState<'admin' | 'employee'>('admin');
@@ -31,9 +31,15 @@ const SignIn: React.FC = () => {
         id: res.user.id,
         name: res.user.name,
         email: res.user.email,
-        role: res.user.role
+        role: res.user.role,
+        mustChangePassword: res.user.mustChangePassword,
+        profilePictureUrl: res.user.profilePictureUrl
       });
-      navigate(from, { replace: true });
+      if (res.user.mustChangePassword) {
+        navigate('/change-password', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (err: any) {
       setError(err.message || 'Invalid credentials. Please try again.');
     }

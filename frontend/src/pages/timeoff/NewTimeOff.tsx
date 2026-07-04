@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, AlertCircle, ArrowLeft, Send } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { api } from '../../utils/api';
+import { api, Employee } from '../../utils/api';
 import { useAuth } from '../../hooks/useAuth';
 
 const NewTimeOff: React.FC = () => {
@@ -13,6 +13,31 @@ const NewTimeOff: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState('');
+  
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    if (isAdmin) {
+      const fetchEmployees = async () => {
+        try {
+          const list = await api.employees.list();
+          setEmployees(list);
+          if (list.length > 0) {
+            setSelectedEmployeeId(list[0].id);
+          }
+        } catch (e) {
+          console.error('Failed to load employee list:', e);
+        }
+      };
+      fetchEmployees();
+    } else {
+      if (user?.id) {
+        setSelectedEmployeeId(user.id);
+      }
+    }
+  }, [isAdmin, user]);
 
   const calculateDays = (start: string, end: string) => {
     if (!start || !end) return 0;
@@ -47,6 +72,9 @@ const NewTimeOff: React.FC = () => {
       formData.append('startDate', new Date(startDate).toISOString());
       formData.append('endDate', new Date(endDate).toISOString());
       formData.append('allocationDays', String(days));
+      if (isAdmin && selectedEmployeeId) {
+        formData.append('employeeId', selectedEmployeeId);
+      }
       if (file) {
         formData.append('attachment', file);
       }
@@ -80,6 +108,21 @@ const NewTimeOff: React.FC = () => {
           <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-medium flex items-center gap-2">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {isAdmin && employees.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">On Behalf Of Employee</label>
+            <select
+              value={selectedEmployeeId}
+              onChange={(e) => setSelectedEmployeeId(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-hrms-lime outline-none transition-all"
+            >
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.id}>{emp.name} ({emp.jobPosition || 'Employee'})</option>
+              ))}
+            </select>
           </div>
         )}
 

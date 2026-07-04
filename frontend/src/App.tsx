@@ -9,6 +9,7 @@ import Attendance from './pages/attendance/Attendance';
 import TimeOff from './pages/timeoff/TimeOff';
 import NewTimeOff from './pages/timeoff/NewTimeOff';
 import Payroll from './pages/payroll/Payroll';
+import ForceChangePassword from './pages/auth/ForceChangePassword';
 import { AuthProvider } from './hooks/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -20,6 +21,7 @@ function App() {
           {/* Public Routes */}
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/change-password" element={<ProtectedRoute><ForceChangePassword /></ProtectedRoute>} />
           
           {/* Default route redirects to dashboard as requested */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

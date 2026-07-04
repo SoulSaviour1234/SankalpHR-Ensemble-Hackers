@@ -251,6 +251,37 @@ export const api = {
         body: JSON.stringify(data),
       });
     },
+    getSummary: (year?: number, month?: number) => {
+      const query = [
+        year ? `year=${year}` : '',
+        month !== undefined ? `month=${month}` : '',
+      ].filter(Boolean).join('&');
+      return request<{
+        year: number;
+        month: number;
+        totalWorkingDays: number;
+        summary: Array<{
+          employeeId: string;
+          name: string;
+          empCode: string;
+          jobPosition: string;
+          department: string;
+          profilePictureUrl: string | null;
+          monthlyWage: number;
+          totalWorkingDays: number;
+          presentDays: number;
+          paidLeaveDays: number;
+          unpaidLeaveDays: number;
+          absentDays: number;
+          payableDays: number;
+          grossSalary: number;
+          pfDeduction: number;
+          ptTax: number;
+          totalDeductions: number;
+          netPayout: number;
+        }>;
+      }>(`/employees/payroll/summary${query ? `?${query}` : ''}`);
+    },
   },
 
   // 4. Attendance Endpoint Methods
@@ -301,6 +332,16 @@ export const api = {
       return request<{ message: string; request: TimeOffRequest }>(`/time-off/requests/${requestId}/status`, {
         method: 'PUT',
         body: JSON.stringify({ status }),
+      });
+    },
+  },
+
+  // 6. Chat Endpoint Methods
+  chat: {
+    sendMessage: (message: string, history?: { role: 'user' | 'assistant'; content: string }[]) => {
+      return request<{ response: string }>('/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message, history }),
       });
     },
   },

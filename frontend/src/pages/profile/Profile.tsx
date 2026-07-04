@@ -22,12 +22,12 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
-import { api, Employee } from '../../utils/api';
+import { api } from '../../utils/api';
 
 const Profile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('My Profile');
   const [isEditing, setIsEditing] = useState(false);
   const [employee, setEmployee] = useState<any>(null);
@@ -94,7 +94,7 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam === 'Salary' && isAdmin) {
+    if (tabParam === 'Salary') {
       setActiveTab('Salary Info');
     }
   }, [searchParams]);
@@ -104,7 +104,10 @@ const Profile: React.FC = () => {
     if (!file || !targetId) return;
 
     try {
-      await api.employees.uploadFile(targetId, file, 'avatar');
+      const res = await api.employees.uploadFile(targetId, file, 'avatar');
+      if (isOwnProfile) {
+        updateUser({ profilePictureUrl: res.fileUrl });
+      }
       fetchEmployee();
     } catch (err: any) {
       alert(err.message || 'Failed to upload profile picture.');
@@ -147,13 +150,27 @@ const Profile: React.FC = () => {
     );
   }
 
-  const tabs = [
+  interface TabItem {
+    name: string;
+    icon: any;
+    adminOnly?: boolean;
+    ownProfileOnly?: boolean;
+    adminOrOwnProfile?: boolean;
+  }
+
+  const tabsList: TabItem[] = [
     { name: 'My Profile', icon: User },
     { name: 'Resume', icon: FileText },
     { name: 'Private Info', icon: Shield },
-    { name: 'Salary Info', icon: DollarSign, adminOnly: true },
-    { name: 'Security', icon: Shield },
-  ].filter(tab => !tab.adminOnly || isAdmin);
+    { name: 'Salary Info', icon: DollarSign, adminOrOwnProfile: true },
+    { name: 'Security', icon: Shield, ownProfileOnly: true },
+  ];
+
+  const tabs = tabsList.filter(tab => 
+    (!tab.adminOnly || isAdmin) && 
+    (!tab.ownProfileOnly || isOwnProfile) &&
+    (!tab.adminOrOwnProfile || (isAdmin || isOwnProfile))
+  );
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -279,8 +296,15 @@ const Profile: React.FC = () => {
             setPrivateInfo={setPrivateInfo} 
           />
         )}
-        {activeTab === 'Salary Info' && <SalaryInfoTab employeeId={employee.id} />}
-        {activeTab === 'Resume' && <ResumeTab employeeId={employee.id} resumeUrl={employee.resumeUrl} fetchEmployee={fetchEmployee} />}
+        {activeTab === 'Salary Info' && <SalaryInfoTab employeeId={employee.id} isAdmin={isAdmin} />}
+        {activeTab === 'Resume' && (
+          <ResumeTab 
+            employeeId={employee.id} 
+            resumeUrl={employee.resumeUrl} 
+            fetchEmployee={fetchEmployee} 
+            canUpdate={isOwnProfile} 
+          />
+        )}
         {activeTab === 'Security' && <SecurityTab />}
       </div>
     </div>
@@ -551,9 +575,14 @@ const PrivateInfoTab: React.FC<PrivateInfoTabProps> = ({ isEditing, isAdmin, pri
 };
 
 // ==========================================
-// SALARY INFO TAB (Admin Only)
+// SALARY INFO TAB
 // ==========================================
-const SalaryInfoTab = ({ employeeId }: { employeeId: string }) => {
+interface SalaryInfoTabProps {
+  employeeId: string;
+  isAdmin: boolean;
+}
+
+const SalaryInfoTab: React.FC<SalaryInfoTabProps> = ({ employeeId, isAdmin }) => {
   const [wage, setWage] = useState(0);
   const [wagePeriod, setWagePeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [components, setComponents] = useState<any[]>([]);
@@ -600,44 +629,60 @@ const SalaryInfoTab = ({ employeeId }: { employeeId: string }) => {
     <div className="space-y-8 animate-in fade-in duration-300">
       <div className="flex flex-col md:flex-row gap-8 items-start md:items-center justify-between">
         <div className="space-y-1">
-          <h3 className="text-xl font-bold text-slate-900">Salary Configuration</h3>
-          <p className="text-sm text-slate-500 font-medium">Auto-recalculated based on Monthly/Yearly Wage.</p>
+          <h3 className="text-xl font-bold text-slate-900">{isAdmin ? 'Salary Configuration' : 'Salary Details'}</h3>
+          <p className="text-sm text-slate-500 font-medium">
+            {isAdmin ? 'Auto-recalculated based on Monthly/Yearly Wage.' : 'Your monthly and yearly wage distribution details.'}
+          </p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
-           <div className="flex bg-white rounded-xl shadow-sm p-1">
-              <button 
-                type="button"
-                onClick={() => setWagePeriod('monthly')}
-                className={cn("px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all", wagePeriod === 'monthly' ? "bg-black text-white" : "text-slate-400 hover:text-slate-600")}
-              >
-                MONTHLY
-              </button>
-              <button 
-                type="button"
-                onClick={() => setWagePeriod('yearly')}
-                className={cn("px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all", wagePeriod === 'yearly' ? "bg-black text-white" : "text-slate-400 hover:text-slate-600")}
-              >
-                YEARLY
-              </button>
-           </div>
-           <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                type="number"
-                value={wage}
-                onChange={(e) => setWage(Number(e.target.value))}
-                className="pl-9 pr-4 py-2 bg-white border border-gray-100 rounded-xl font-bold text-slate-900 w-32 focus:ring-2 focus:ring-hrms-lime outline-none"
-              />
-           </div>
-           <button 
-             type="button" 
-             onClick={handleUpdateSalary}
-             className="px-4 py-2 bg-hrms-lime text-slate-900 rounded-xl text-xs font-bold shadow-sm hover:opacity-90 transition-all active:scale-95"
-           >
-             RECALCULATE & SAVE
-           </button>
-        </div>
+        {isAdmin ? (
+          <div className="flex flex-wrap items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
+             <div className="flex bg-white rounded-xl shadow-sm p-1">
+                <button 
+                  type="button"
+                  onClick={() => setWagePeriod('monthly')}
+                  className={cn("px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all", wagePeriod === 'monthly' ? "bg-black text-white" : "text-slate-400 hover:text-slate-600")}
+                >
+                  MONTHLY
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setWagePeriod('yearly')}
+                  className={cn("px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all", wagePeriod === 'yearly' ? "bg-black text-white" : "text-slate-400 hover:text-slate-600")}
+                >
+                  YEARLY
+                </button>
+             </div>
+             <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  type="number"
+                  value={wage === 0 ? '' : wage}
+                  onChange={(e) => setWage(e.target.value === '' ? 0 : Number(e.target.value))}
+                  className="pl-9 pr-4 py-2 bg-white border border-gray-100 rounded-xl font-bold text-slate-900 w-32 focus:ring-2 focus:ring-hrms-lime outline-none"
+                />
+             </div>
+             <button 
+               type="button" 
+               onClick={handleUpdateSalary}
+               className="px-4 py-2 bg-hrms-lime text-slate-900 rounded-xl text-xs font-bold shadow-sm hover:opacity-90 transition-all active:scale-95"
+             >
+               RECALCULATE & SAVE
+             </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Base Wage:</span>
+              <span className="text-sm font-black text-slate-900">₹{wage.toLocaleString()}</span>
+            </div>
+            <div className="h-4 w-px bg-slate-200" />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Period:</span>
+              <span className="text-xs font-bold text-slate-900 uppercase">{wagePeriod}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -715,9 +760,10 @@ interface ResumeTabProps {
   employeeId: string;
   resumeUrl?: string | null;
   fetchEmployee: () => void;
+  canUpdate: boolean;
 }
 
-const ResumeTab: React.FC<ResumeTabProps> = ({ employeeId, resumeUrl, fetchEmployee }) => {
+const ResumeTab: React.FC<ResumeTabProps> = ({ employeeId, resumeUrl, fetchEmployee, canUpdate }) => {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -753,19 +799,25 @@ const ResumeTab: React.FC<ResumeTabProps> = ({ employeeId, resumeUrl, fetchEmplo
         ) : (
           <>
             <h3 className="font-bold text-slate-900">No Resume Uploaded</h3>
-            <p className="text-sm text-slate-400 mt-1">Upload your latest professional resume here.</p>
+            <p className="text-sm text-slate-400 mt-1">
+              {canUpdate ? 'Upload your latest professional resume here.' : 'No resume has been uploaded by the employee.'}
+            </p>
           </>
         )}
       </div>
-      <button 
-        type="button" 
-        onClick={() => fileRef.current?.click()}
-        className="px-6 py-3 bg-black text-white rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors"
-      >
-        <Plus className="w-4 h-4" />
-        {resumeUrl ? 'UPDATE FILE' : 'UPLOAD FILE'}
-      </button>
-      <input type="file" ref={fileRef} style={{ display: 'none' }} accept=".pdf,.doc,.docx" onChange={handleResumeUpload} />
+      {canUpdate && (
+        <>
+          <button 
+            type="button" 
+            onClick={() => fileRef.current?.click()}
+            className="px-6 py-3 bg-black text-white rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            {resumeUrl ? 'UPDATE FILE' : 'UPLOAD FILE'}
+          </button>
+          <input type="file" ref={fileRef} style={{ display: 'none' }} accept=".pdf,.doc,.docx" onChange={handleResumeUpload} />
+        </>
+      )}
     </div>
   );
 };

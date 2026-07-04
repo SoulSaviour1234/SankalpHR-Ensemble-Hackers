@@ -10,7 +10,6 @@ import {
   MoreVertical,
   Search,
   ChevronRight,
-  MessageSquare,
   FileDown
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
@@ -78,15 +77,13 @@ const TimeOff: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          {!isAdmin && (
-            <Link
-              to="/timeoff/new"
-              className="flex items-center gap-2 px-6 py-3 bg-hrms-lime text-slate-900 rounded-2xl text-sm font-bold shadow-xl shadow-hrms-lime/10 hover:opacity-90 transition-all active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              NEW REQUEST
-            </Link>
-          )}
+          <Link
+            to="/timeoff/new"
+            className="flex items-center gap-2 px-6 py-3 bg-hrms-lime text-slate-900 rounded-2xl text-sm font-bold shadow-xl shadow-hrms-lime/10 hover:opacity-90 transition-all active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            NEW REQUEST
+          </Link>
         </div>
       </div>
 
@@ -163,7 +160,7 @@ const TimeOff: React.FC = () => {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-slate-900 uppercase text-xs">{req.type} Leave</p>
+                          <p className="text-xs font-bold text-slate-900 uppercase">{req.type} Leave</p>
                           {req.attachmentUrl && (
                             <a 
                               href={`http://localhost:5000${req.attachmentUrl}`} 

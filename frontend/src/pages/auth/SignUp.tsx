@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, User, Eye, EyeOff, CheckCircle2, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { cn } from '../../utils/cn';
 import { api, setAuthToken } from '../../utils/api';
 
 const SignUp: React.FC = () => {

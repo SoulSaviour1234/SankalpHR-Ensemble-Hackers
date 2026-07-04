@@ -5,8 +5,7 @@ import {
   Clock, 
   Calendar, 
   LogOut,
-  CreditCard,
-  LayoutDashboard
+  CreditCard
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
@@ -22,7 +21,7 @@ const Sidebar: React.FC = () => {
     { icon: Users, label: isAdmin ? 'Employees' : 'My Team', path: '/dashboard', adminOnly: true },
     { icon: Clock, label: 'Attendance', path: '/attendance' },
     { icon: Calendar, label: 'Time Off', path: '/timeoff' },
-    { icon: CreditCard, label: 'Payroll', path: isAdmin ? '/payroll' : '/profile/me', extraTab: !isAdmin ? 'Salary Info' : undefined },
+    { icon: CreditCard, label: 'Payroll', path: isAdmin ? '/payroll' : '/profile/me?tab=Salary' },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
@@ -43,7 +42,7 @@ const Sidebar: React.FC = () => {
 
       <nav className="flex-1 px-4 py-4 space-y-1">
         {filteredMenuItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive = location.pathname === item.path.split('?')[0];
           return (
             <Link
               key={item.label}
@@ -64,10 +63,11 @@ const Sidebar: React.FC = () => {
 
       <div className="p-4 border-t border-gray-50">
         <div className="flex items-center gap-3 px-4 py-3 mb-2">
-          <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
+          <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border border-gray-100 flex items-center justify-center font-bold text-slate-400 text-xs">
             <img 
-              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
+              src={user?.profilePictureUrl ? `http://localhost:5000${user.profilePictureUrl}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}`} 
               alt="User" 
+              className="w-full h-full object-cover"
             />
           </div>
           <div className="flex-1 min-w-0">

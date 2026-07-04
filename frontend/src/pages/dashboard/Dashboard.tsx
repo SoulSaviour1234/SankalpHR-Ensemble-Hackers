@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Plane, 
@@ -18,8 +18,6 @@ import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
 import { api, Employee } from '../../utils/api';
 
-const mockEmployees: Employee[] = [];
-
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
 
@@ -35,20 +33,116 @@ const Dashboard: React.FC = () => {
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   
+  const [activities, setActivities] = useState<any[]>([]);
+  const [attendanceRate, setAttendanceRate] = useState('0%');
+  const [upcomingLeave, setUpcomingLeave] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
   const quickAccess = [
-    { label: 'Profile', icon: User, path: '/profile/me', color: 'bg-hrms-blue text-blue-600' },
+    { label: 'Profile', icon: User, path: `/profile/${user?.id}`, color: 'bg-hrms-blue text-blue-600' },
     { label: 'Attendance', icon: Clock, path: '/attendance', color: 'bg-hrms-lime text-green-700' },
     { label: 'Leave Requests', icon: Calendar, path: '/timeoff', color: 'bg-hrms-purple text-purple-600' },
     { label: 'Logout', icon: LogOut, path: '/signin', color: 'bg-hrms-orange text-orange-600' },
   ];
 
-  const activities = [
-    { title: 'Check-in Successful', time: '09:00 AM', description: 'You have successfully checked in for the day.', type: 'success' },
-    { title: 'Leave Approved', time: 'Yesterday', description: 'Your request for Paid Time Off (July 15-17) has been approved.', type: 'info' },
-    { title: 'Attendance Reminder', time: '2 days ago', description: 'Please complete your time logs for the previous week.', type: 'warning' },
-  ];
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        // Fetch attendance logs
+        const attendanceRes = await api.attendance.myLogs();
+        const logs = attendanceRes.logs;
+
+        // Fetch leave requests
+        const requests = await api.timeOff.requests();
+
+        // Calculate attendance rate (present days / total working days in logs)
+        const presentCount = attendanceRes.summary.presentCount;
+        const totalWorkDays = attendanceRes.summary.totalWorkingDays;
+        const rate = totalWorkDays > 0 ? ((presentCount / totalWorkDays) * 100).toFixed(1) + '%' : '100%';
+        setAttendanceRate(rate);
+
+        // Find upcoming approved leave
+        const today = new Date();
+        const upcoming = requests
+          .filter(req => req.status === 'approved' && new Date(req.startDate) > today)
+          .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0];
+        setUpcomingLeave(upcoming);
+
+        // Build activities list dynamically
+        const list = [];
+
+        // Check if checked in today
+        const todayStr = today.toISOString().split('T')[0];
+        const todayLog = logs.find(l => l.date.startsWith(todayStr));
+        if (todayLog && todayLog.checkIn) {
+          list.push({
+            title: 'Checked In',
+            time: new Date(todayLog.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            description: 'You successfully checked in for the day.',
+            type: 'success',
+            date: new Date(todayLog.checkIn),
+          });
+        }
+
+        // Add recent attendance check-ins from previous days
+        logs.filter(l => !l.date.startsWith(todayStr) && l.checkIn).slice(0, 2).forEach(log => {
+          list.push({
+            title: 'Checked In',
+            time: new Date(log.date).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+            description: `Worked for ${log.workHours} hours. Check-in: ${new Date(log.checkIn!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+            type: 'success',
+            date: new Date(log.checkIn!),
+          });
+        });
+
+        // Add leave request updates
+        requests.slice(0, 2).forEach(req => {
+          let reqType = 'info';
+          if (req.status === 'approved') reqType = 'success';
+          if (req.status === 'rejected') reqType = 'warning';
+
+          list.push({
+            title: `Leave ${req.status.charAt(0).toUpperCase() + req.status.slice(1)}`,
+            time: new Date(req.startDate).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+            description: `Your request for ${req.type.toUpperCase()} leave (${new Date(req.startDate).toLocaleDateString()} - ${new Date(req.endDate).toLocaleDateString()}) has been ${req.status}.`,
+            type: reqType,
+            date: new Date(req.startDate),
+          });
+        });
+
+        // Sort by date desc
+        list.sort((a, b) => b.date.getTime() - a.date.getTime());
+        setActivities(list.slice(0, 4));
+
+      } catch (err) {
+        console.error('Failed to load employee dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+
+    const handleGlobalUpdate = () => {
+      fetchDashboardData();
+    };
+    window.addEventListener('attendance-update', handleGlobalUpdate);
+    return () => {
+      window.removeEventListener('attendance-update', handleGlobalUpdate);
+    };
+  }, []);
+
+  const handleQuickAccessClick = (item: typeof quickAccess[0]) => {
+    if (item.label === 'Logout') {
+      logout();
+      navigate('/signin');
+    } else {
+      navigate(item.path);
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -67,7 +161,7 @@ const EmployeeDashboard = () => {
         {quickAccess.map((item) => (
           <button
             key={item.label}
-            onClick={() => navigate(item.path)}
+            onClick={() => handleQuickAccessClick(item)}
             className="group p-6 bg-white rounded-3xl border border-gray-50 hover:border-hrms-lime hover:shadow-xl hover:shadow-hrms-lime/10 transition-all text-left relative overflow-hidden"
           >
             <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110", item.color)}>
@@ -86,25 +180,33 @@ const EmployeeDashboard = () => {
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-bold text-slate-900">Recent Activity</h2>
-            <button className="text-sm font-bold text-hrms-text-secondary hover:text-black">View All</button>
+            <button onClick={() => navigate('/attendance')} className="text-sm font-bold text-hrms-text-secondary hover:text-black">View All</button>
           </div>
-          <div className="bg-white rounded-3xl border border-gray-50 overflow-hidden shadow-sm">
-            {activities.map((activity, i) => (
-              <div key={i} className={cn("p-6 flex gap-4 items-start", i !== activities.length - 1 && "border-b border-gray-50")}>
-                <div className={cn(
-                  "mt-1 w-2 h-2 rounded-full",
-                  activity.type === 'success' ? "bg-green-500" : 
-                  activity.type === 'info' ? "bg-blue-500" : "bg-yellow-500"
-                )} />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-bold text-slate-900">{activity.title}</h4>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{activity.time}</span>
-                  </div>
-                  <p className="text-sm text-slate-500 leading-relaxed">{activity.description}</p>
-                </div>
+          <div className="bg-white rounded-3xl border border-gray-50 overflow-hidden shadow-sm min-h-[150px] flex flex-col justify-center">
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900"></div>
               </div>
-            ))}
+            ) : activities.length > 0 ? (
+              activities.map((activity, i) => (
+                <div key={i} className={cn("p-6 flex gap-4 items-start", i !== activities.length - 1 && "border-b border-gray-50")}>
+                  <div className={cn(
+                    "mt-1.5 w-2 h-2 rounded-full flex-shrink-0",
+                    activity.type === 'success' ? "bg-green-500" : 
+                    activity.type === 'info' ? "bg-blue-500" : "bg-yellow-500"
+                  )} />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-bold text-slate-900 text-sm">{activity.title}</h4>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{activity.time}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 leading-relaxed">{activity.description}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-slate-400 text-sm font-medium py-8">No recent activity logs.</p>
+            )}
           </div>
         </div>
 
@@ -117,19 +219,27 @@ const EmployeeDashboard = () => {
                  <TrendingUp className="w-4 h-4" />
                  <span className="text-[10px] font-bold uppercase tracking-widest">Attendance Rate</span>
                </div>
-               <div className="text-4xl font-bold mb-1">98.2%</div>
-               <p className="text-slate-400 text-sm font-medium">Top 5% in the company</p>
+               <div className="text-4xl font-bold mb-1">{attendanceRate}</div>
+               <p className="text-slate-400 text-sm font-medium">For the current month</p>
              </div>
              <div className="absolute top-0 right-0 w-32 h-32 bg-hrms-lime/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
           </div>
           
           <div className="bg-hrms-lime/20 p-8 rounded-3xl border border-hrms-lime/30">
             <h3 className="text-slate-900 font-bold mb-1 text-sm">Upcoming Leave</h3>
-            <p className="text-slate-600 text-xs font-medium mb-4">Paid Time Off</p>
-            <div className="flex items-center justify-between">
-               <span className="text-lg font-bold text-slate-900">July 15 - 17</span>
-               <span className="px-3 py-1 bg-white/50 rounded-lg text-[10px] font-bold uppercase tracking-tighter">Approved</span>
-            </div>
+            {upcomingLeave ? (
+              <>
+                <p className="text-slate-600 text-xs font-bold uppercase tracking-tight mb-4">{upcomingLeave.type} Leave</p>
+                <div className="flex items-center justify-between">
+                   <span className="text-sm font-bold text-slate-900">
+                     {new Date(upcomingLeave.startDate).toLocaleDateString([], { month: 'short', day: 'numeric' })} - {new Date(upcomingLeave.endDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                   </span>
+                   <span className="px-3 py-1 bg-white/50 rounded-lg text-[9px] font-bold uppercase tracking-tighter text-green-700">Approved</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-slate-500 text-xs font-semibold py-4">No upcoming leaves scheduled.</p>
+            )}
           </div>
         </div>
       </div>

@@ -8,7 +8,10 @@ import {
   Users, 
   ArrowUpRight,
   MoreVertical,
-  Edit2
+  Edit2,
+  X,
+  CheckCircle,
+  HelpCircle
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { api, Employee } from '../../utils/api';
@@ -17,6 +20,14 @@ const Payroll: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [employees, setEmployees] = useState<Employee[]>([]);
+
+  // Run Payroll Modal states
+  const [showRunPayrollModal, setShowRunPayrollModal] = useState(false);
+  const [payrollMonth, setPayrollMonth] = useState(new Date().getMonth());
+  const [payrollYear, setPayrollYear] = useState(new Date().getFullYear());
+  const [payrollSummary, setPayrollSummary] = useState<any>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const loadEmployees = async () => {
     try {
@@ -31,16 +42,48 @@ const Payroll: React.FC = () => {
     loadEmployees();
   }, [searchTerm]);
 
+  const loadPayrollSummary = async () => {
+    try {
+      setLoadingSummary(true);
+      const data = await api.salary.getSummary(payrollYear, payrollMonth);
+      setPayrollSummary(data);
+    } catch (e) {
+      console.error('Failed to load payroll summary:', e);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showRunPayrollModal) {
+      loadPayrollSummary();
+    }
+  }, [showRunPayrollModal, payrollMonth, payrollYear]);
+
   // Compute stats dynamically
   const totalPayrollVal = employees.reduce((sum, emp) => sum + (emp.salaryInfo?.wageAmount || 0), 0);
   const activeSalariesCount = employees.filter(emp => (emp.salaryInfo?.wageAmount || 0) > 0).length;
   const avgSalaryVal = activeSalariesCount > 0 ? Math.round(totalPayrollVal / activeSalariesCount) : 0;
 
   const stats = [
-    { label: 'Total Payroll (Monthly)', value: `₹${totalPayrollVal.toLocaleString()}`, icon: DollarSign, color: 'text-blue-600 bg-blue-50', trend: '+12%' },
+    { label: 'Total Base Payroll (Monthly)', value: `₹${totalPayrollVal.toLocaleString()}`, icon: DollarSign, color: 'text-blue-600 bg-blue-50', trend: '+12%' },
     { label: 'Avg Salary', value: `₹${avgSalaryVal.toLocaleString()}`, icon: TrendingUp, color: 'text-green-600 bg-green-50', trend: '+5%' },
     { label: 'Employees Configured', value: activeSalariesCount.toString(), icon: Users, color: 'text-purple-600 bg-purple-50', trend: 'Active' },
   ];
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const handleProcessPayroll = () => {
+    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(false);
+      setShowRunPayrollModal(false);
+      alert(`Payroll for ${monthNames[payrollMonth]} ${payrollYear} has been processed successfully! All direct bank transfers initiated.`);
+    }, 1500);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -54,7 +97,7 @@ const Payroll: React.FC = () => {
           <button 
             type="button"
             className="flex items-center gap-2 px-6 py-3 bg-black text-white rounded-2xl text-sm font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95"
-            onClick={() => alert('Payroll successfully batch-processed for all employees!')}
+            onClick={() => setShowRunPayrollModal(true)}
           >
              RUN PAYROLL
              <ArrowUpRight className="w-4 h-4" />
@@ -157,7 +200,7 @@ const Payroll: React.FC = () => {
                     <div className="flex items-center justify-end gap-2">
                        <button 
                          type="button" 
-                         className="p-2 text-slate-300 hover:text-hrms-lime transition-colors"
+                         className="p-2 text-slate-300 hover:text-slate-600 transition-colors"
                          onClick={() => navigate(`/profile/${emp.id}?tab=Salary`)}
                          title="Edit Salary"
                        >
@@ -179,6 +222,160 @@ const Payroll: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Interactive Run Payroll Modal */}
+      {showRunPayrollModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] p-8 max-w-5xl w-full border border-slate-100 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setShowRunPayrollModal(false)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-black hover:bg-slate-50 rounded-xl transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Run Batch Payroll</h2>
+                <p className="text-slate-500 font-medium text-xs mt-0.5">Generates payslips with attendance-based deductions.</p>
+              </div>
+
+              {/* Month/Year selectors */}
+              <div className="flex gap-2">
+                <select 
+                  value={payrollMonth} 
+                  onChange={(e) => setPayrollMonth(Number(e.target.value))}
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none"
+                >
+                  {monthNames.map((name, idx) => (
+                    <option key={idx} value={idx}>{name}</option>
+                  ))}
+                </select>
+                <select 
+                  value={payrollYear} 
+                  onChange={(e) => setPayrollYear(Number(e.target.value))}
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none"
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(yr => (
+                    <option key={yr} value={yr}>{yr}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {loadingSummary ? (
+              <div className="py-20 flex flex-col items-center justify-center space-y-3">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-slate-900"></div>
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest animate-pulse">Calculating payouts...</p>
+              </div>
+            ) : payrollSummary ? (
+              <div className="space-y-6">
+                {/* Info Card */}
+                <div className="p-4 bg-hrms-blue/20 border border-hrms-blue/30 rounded-2xl flex items-start gap-3">
+                  <HelpCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-blue-800 font-semibold leading-relaxed">
+                    Calculation formula: <code className="bg-white px-1.5 py-0.5 rounded border border-blue-100 font-bold">Gross Salary = (Base / Working Days) * Payable Days</code>.
+                    Payable days include present days and approved paid/sick leaves. Absent days or unpaid leaves are excluded.
+                  </p>
+                </div>
+
+                <div className="overflow-x-auto border border-gray-100 rounded-2xl">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Employee</th>
+                        <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Work Status</th>
+                        <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Base Salary</th>
+                        <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Gross Salary</th>
+                        <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Deductions</th>
+                        <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Net Payout</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 text-slate-700">
+                      {payrollSummary.summary.map((row: any) => (
+                        <tr key={row.employeeId} className="hover:bg-slate-50/50">
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center font-bold text-slate-400 text-xs">
+                                {row.profilePictureUrl ? (
+                                  <img src={`http://localhost:5000${row.profilePictureUrl}`} alt={row.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  row.name.split(' ').map((n: string) => n[0]).join('')
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-slate-900">{row.name}</p>
+                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{row.jobPosition}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-center">
+                            <p className="text-xs font-bold text-slate-800">{row.payableDays} / {row.totalWorkingDays} Days</p>
+                            <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-tight mt-0.5">
+                              P: {row.presentDays} | L: {row.paidLeaveDays} | A: {row.absentDays + row.unpaidLeaveDays}
+                            </p>
+                          </td>
+                          <td className="px-5 py-4 text-right text-xs font-semibold">₹{row.monthlyWage.toLocaleString()}</td>
+                          <td className="px-5 py-4 text-right text-xs font-semibold">₹{row.grossSalary.toLocaleString()}</td>
+                          <td className="px-5 py-4 text-right text-xs font-semibold text-red-500">₹{row.totalDeductions.toLocaleString()}</td>
+                          <td className="px-5 py-4 text-right text-xs font-bold text-green-600">₹{row.netPayout.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Aggregate Summary Box */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Gross Earnings</span>
+                    <p className="text-lg font-black text-slate-900 mt-0.5">
+                      ₹{payrollSummary.summary.reduce((s: number, r: any) => s + r.grossSalary, 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Deductions (PF+PT)</span>
+                    <p className="text-lg font-black text-red-500 mt-0.5">
+                      ₹{payrollSummary.summary.reduce((s: number, r: any) => s + r.totalDeductions, 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Net Disbursement</span>
+                    <p className="text-xl font-black text-green-600 mt-0.5">
+                      ₹{payrollSummary.summary.reduce((s: number, r: any) => s + r.netPayout, 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowRunPayrollModal(false)}
+                    className="px-6 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all"
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleProcessPayroll}
+                    disabled={isProcessing}
+                    className="flex items-center gap-2 px-6 py-3 bg-black text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all disabled:opacity-50"
+                  >
+                    {isProcessing ? 'PROCESSING...' : (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        CONFIRM PAYOUTS
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="py-25 text-center text-slate-400 font-medium">Failed to calculate payroll details.</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
